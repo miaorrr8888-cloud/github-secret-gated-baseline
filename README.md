@@ -1,5 +1,7 @@
 # GitHub 上传前凭证检查
 
+[新手逐步使用指南](USER_GUIDE.md) · [用途与适用人群介绍](INTRODUCTION.md)
+
 `github-secret-gated-baseline` · 独立技能仓库 · MIT
 
 适合：准备把本地项目开源的开发者、AI 工具使用者
