@@ -32,9 +32,9 @@ python scripts/gate_scan.py --staged
 
 已补：新增 --staged 检查 Git 暂存版本；收紧占位符判断；冻结清单跳过凭证、浏览器数据、依赖和符号链接；补对应回归测试。
 
-## 仍然缺什么
+## 当前限制
 
-仍是启发式模式扫描，可能漏报和误报；不能替代专业秘密扫描器、远程历史审查或已泄露密钥的吊销。
+默认最多 100 个可达提交，超大/二进制文件跳过并计数；不是完整安全审计。发现真实泄露后先吊销或轮换，再处理历史，不能只删除当前文件。
 
 ## 验证与使用注意
 
@@ -51,3 +51,15 @@ python -m unittest discover -s tests -v
 由 miaorrr8888-cloud 在 AI 辅助下积累和维护，来源与边界见 [PROVENANCE.md](PROVENANCE.md)，许可见 [LICENSE](LICENSE)。
 
 [全部独立技能与阶段性工作记录](https://github.com/miaorrr8888-cloud/agent-skills-worklog)
+
+## 第二轮：历史提交检查
+
+新增 Git 历史文本扫描，已删除的敏感文件也能定位到提交；报告只给位置和类别，不输出命中内容。
+
+在仓库根目录运行：
+
+```sh
+python scripts/scan_history.py /path/to/repository --limit 100
+```
+
+新增工具的输入字段见脚本参数与 examples/。快照示例采用固定日期，过期后正常返回 HOLD；需要检查新采集的页面时填写真实带时区的采集时间，不要改日期伪装新证据。

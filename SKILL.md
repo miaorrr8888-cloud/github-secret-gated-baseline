@@ -23,3 +23,7 @@ Never print credential values while reviewing findings. A historical zero-hit re
 ## 上手示例与当前限制
 
 先读 [README.md](README.md) 的快速开始、输入输出和未完成项；可运行例子在 examples/，本次修订见 CHANGELOG.md。不要把合成演示或离线检查当成真实平台验证。
+
+## 扩展能力
+
+新增 Git 历史文本扫描，已删除的敏感文件也能定位到提交；报告只给位置和类别，不输出命中内容。 使用前阅读 [README.md](README.md) 的“第二轮”命令和当前限制。不要把本地检查、人工声明或模拟响应解释为实时平台验证。
