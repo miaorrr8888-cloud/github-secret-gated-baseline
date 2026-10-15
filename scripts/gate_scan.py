@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Secret gate for micro_quant.
+Heuristic credential-pattern gate for the selected repository.
 Rules:
   - Prints ONLY a verdict + offending file paths + coarse category codes.
   - NEVER prints secret values or credential key names.
@@ -14,7 +14,7 @@ Output (stdout, minimal):
   HIT=<relpath>|<category>
   HIT_COUNT=N
 """
-import os, re, subprocess, sys
+import os, re, subprocess, sys, ast
 
 ROOT = os.path.abspath(os.getcwd())
 SKIP_DIRS = {".git", "__pycache__", ".venv", "venv", "node_modules", ".pytest_cache"}
@@ -54,41 +54,46 @@ TEXT_EXT = {
 
 
 def is_placeholder(v):
-    s = v.strip().strip('"\'').strip()
-    if s == "":
-        return True
-    if len(s) < 6:
-        return True
-    low = s.lower()
-    if any(h in low for h in PLACEHOLDER_HINTS):
-        return True
-    # a value that is actually a code expression / dict entry / attribute read
-    if CODE_EXPR.search(s):
-        return True
-    # a value containing CJK characters is a UI label / description, not a credential
-    if any("\u4e00" <= ch <= "\u9fff" for ch in s):
-        return True
+    value=v.strip()
+    quoted=value.startswith(('"', "'"))
+    if quoted:
+        try:
+            literal=ast.literal_eval(value.split(' #',1)[0])
+            if not isinstance(literal,str): return True
+            value=literal
+        except (ValueError,SyntaxError):
+            return False
+    elif CODE_EXPR.search(value): return True
+    low=value.strip().lower()
+    if low in {'','none','null','true','false','not_set','unset','missing','unknown','pending','tbd','redacted','changeme','change_me','placeholder','example','sample','dummy','fake','todo'}: return True
+    if low.startswith(('your_','your-','test_key','<')): return True
+    if re.fullmatch(r'x+',low): return True
     return False
 
 
-def scan_text(text):
+def scan_text(text, filename=None):
     """Return sorted set of category codes found in text."""
     cats = set()
     for name, rx in PATTERNS:
         if rx.search(text):
             cats.add(name)
     for m in SENSITIVE_KEY.finditer(text):
+        if filename and filename.endswith('.py') and re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*\s*:\s*(?:str|int|float|bool|Optional\[str\])\s*',m.group(0).strip()):
+            continue
+        if m.group(1).upper() in {"SECRET_SCAN", "LEAK_SCAN"} and m.group(2).strip() in {"PASS", "FAIL", "ERROR"}:
+            continue
         if not is_placeholder(m.group(2)):
             cats.add("credential_assignment")
     return cats
 
 
 def main():
-    tracked = "--tracked" in sys.argv
+    staged = "--staged" in sys.argv
+    tracked = "--tracked" in sys.argv or staged
     files = []
     if tracked:
         result = subprocess.run(
-            ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True,
+            (["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"] if staged else ["git", "ls-files"]), cwd=ROOT, capture_output=True, text=True,
             encoding="utf-8", errors="replace",
         )
         if result.returncode:
@@ -122,12 +127,16 @@ def main():
         if ext not in TEXT_EXT and not base.startswith("."):
             continue
         try:
-            with open(fp, "r", encoding="utf-8", errors="replace") as fh:
-                text = fh.read()
+            if staged:
+                blob=subprocess.run(['git','show',':'+rel],cwd=ROOT,capture_output=True,check=True)
+                text=blob.stdout.decode('utf-8',errors='replace')
+            else:
+                with open(fp, "r", encoding="utf-8", errors="replace") as fh:
+                    text = fh.read()
         except Exception:
             hits.append((rel, "unreadable_file"))
             continue
-        for c in scan_text(text):
+        for c in scan_text(text, rel):
             hits.append((rel, c))
 
     # de-dupe file+category

@@ -19,3 +19,7 @@ Run scripts from the target repository working directory. Helpers no longer refe
 
 The pattern scanner is a heuristic, not a security certification. It can miss secrets and generate false positives.
 Never print credential values while reviewing findings. A historical zero-hit result is not evidence for changed files.
+
+## 上手示例与当前限制
+
+先读 [README.md](README.md) 的快速开始、输入输出和未完成项；可运行例子在 examples/，本次修订见 CHANGELOG.md。不要把合成演示或离线检查当成真实平台验证。
